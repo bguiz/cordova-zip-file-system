@@ -69,29 +69,57 @@
   }
 
   function directory_copyRecursive(fsRootSource, source, fsRootDest, dest, onDone) {
-    var numFods = 0;
-    var numWritten = 0;
-    var numErrored = 0;
+    // var numFods = 0;
+    var numFiles = 0;
+    var numFilesWritten = 0;
+    var numFilesErrored = 0;
+    var numFolders = 0;
+    var numFoldersWritten = 0;
+    var numFoldersErrored = 0;
     var replaceFlag = Windows.Storage.CreationCollisionOption.replaceExisting;
+    
+    source = source.replace(/\//g, '\\');
+    dest = dest.replace(/\//g, '\\');
 
     fsRootSource
       .getFolderAsync(source)
       .then(function onGotSourceDir(srcDir) {
-        directory_makeRecursive(fsRootDest, dest, function onMkdirpDest(err, dirEntry) {
-          if (!!err) {
-            onDone(err);
-            return;
-          }
-          copyFolders(srcDir);
-        });
+        fsRootDest.tryGetItemAsync(dest)
+          .then(function onTestDestExists(testDestFolder) {
+            if (!!testDestFolder) {
+              // Remove it
+              testDestFolder.deleteAsync()
+                .then(function onDeleted() {
+                  mkdirDestAndCopyIntoIt();
+                }, function onDeleteFailed() {
+                  onDone('Destination directory already exists, and could not be deleted: '+testDestFolder.path);
+                });
+            }
+            else {
+              mkdirDestAndCopyIntoIt();
+            }
+          });
+        function mkdirDestAndCopyIntoIt() {
+          directory_makeRecursive(fsRootDest, dest, function onMkdirpDest(err, destFolder) {
+            if (!!err) {
+              onDone(err);
+              return;
+            }
+            console.log('cp -r ', srcDir.path, destFolder.path);
+            copyFolders(srcDir, destFolder);
+          });
+        }
       })
     .then(undefined, function onErr(err) {
       console.error('Err:', err);
     });
 
-    function copyFolders(from) {
+    function copyFolders(from, destFolder) {
       if (!from) {
         throw 'Invalid from directory';
+      }
+      if (!destFolder) {
+        throw 'Invalid dest directory';
       }
 
       var checkedFiles = false;
@@ -105,17 +133,18 @@
         .then(function onGotFiles(files) {
           checkedFiles = true;
           if (!!files) {
-            numFods += files.length;
+            numFiles += files.length;
             files.forEach(function onFile(result) {
-              console.log("copy file: " + result.displayName);
+              console.log("copy file: " + result.name);
               result
-                .copyAsync(destFolder)
+                .copyAsync(destFolder, result.name, replaceFlag)
                 .then(function onFileCopied() {
-                  ++numWritten
+                  ++numFilesWritten
                   checkComplete();
                 }, function onFileCopyError(err) {
-                  console.error('Err', err);
-                  ++numErrored;
+                  console.error('Err', result, err);
+                  ++numFilesErrored;
+                  checkComplete();
                 });
             });
           }
@@ -129,7 +158,7 @@
         .getFoldersAsync()
         .then(function onGotFolders(folders) {
           checkedFolders = true;
-          numFods += folders.length;
+          numFolders += folders.length;
           if (folders.length === 0) {
             checkComplete();
           }
@@ -138,12 +167,12 @@
             destFolder
               .createFolderAsync(folder.name, replaceFlag)
               .then(function onCreatedParallelFolder(newFolder) {
-                ++numWritten;
+                ++numFoldersWritten;
                 copyFolders(folder, newFolder);
-                checkComplete();
+                // checkComplete();
               }, function onFolderCreateError(err) {
                 console.error('Err', err);
-                ++numErrored;
+                ++numFoldersErrored;
               });
           });
         }, function onGotFoldersError(err) {
@@ -154,12 +183,13 @@
       function checkComplete() {
         if (checkedFiles &&
           checkedFolders &&
-          numWritten + numErrored >= numFods) {
+          numFilesWritten + numFilesErrored >= numFiles &&
+          numFoldersWritten + numFoldersErrored >= numFolders) {
           var err;
-          if (numErrored > 0) {
-            err = 'Number of files or directories errored: ' + numErrored;
+          if (numFilesErrored + numFoldersErrored > 0) {
+            err = 'Number of files or directories errored: ' + (numFilesErrored + numFoldersErrored);
           }
-          onDone(err, numWritten);
+          onDone(err, numFilesWritten + numFoldersWritten);
         }
       }
 
