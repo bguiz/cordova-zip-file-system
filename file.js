@@ -24,7 +24,7 @@
         var dirPath = path.replace( /\/[^\/]+$/ , '');
         global.CordovaZipFileSystem.directory.makeRecursive(fsRoot, dirPath, function onMkdirpDone(err, dirEntry) {
           if (!!err) {
-            onFail(err);
+            onGotFileEntry(err);
           }
           continueGetDataFile();
         });
@@ -61,16 +61,16 @@
     }
     else {
         //read
-            fsRoot
-                .tryGetItemAsync(path)
-                .done(function fileExists(file) {
-                    if (!!file) {
-                        fsRoot.getFileAsync(path).then(onGotFileEntry, onFailToGetFileEntry);
-                    }
-                    else {
-                        onFailToGetFileEntry('No file found at path: ' + path);
-                    }
-                }, onFailToGetFileEntry);
+        fsRoot
+          .tryGetItemAsync(path)
+          .done(function fileExists(file) {
+              if (!!file) {
+                  fsRoot.getFileAsync(path).then(onGotFileEntry, onFailToGetFileEntry);
+              }
+              else {
+                  onFailToGetFileEntry('No file found at path: ' + path);
+              }
+          }, onFailToGetFileEntry);
        //     fsRoot.
        // getFileAsync(path)
        // .then(onGotFileEntry, onFailToGetFileEntry);
@@ -95,11 +95,12 @@
 
     file_getEntry(options.name, options.flags, function onGotFileEntry(err, fileEntry) {
       if (!!err) {
-        onFail(err);
+        onDone(err);
+        return;
       }
 
       writeBlobToFile(fileEntry, blob, onDone);
-    }, onFail);
+    }, onDone);
   }
 
   function _regular_writeBlobToFile(fileEntry, blob, onDone) {

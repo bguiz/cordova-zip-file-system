@@ -183,6 +183,7 @@
         ++numFiles;
         global.CordovaZipFileSystem.file.write(fileOptions, function onWriteFileDone(err, fileEntry, evt) {
           if (!!err) {
+            console.log('Failed to extract', fileOptions.name);
             ++numFilesErrored;
             onDone(err);
             return;

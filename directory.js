@@ -12,6 +12,7 @@
     makeRecursive: directory_makeRecursive,
     makeTree: directory_makeTree,
     copyRecursive: directory_copyRecursive,
+    get: directory_get,
     
     _initialise: directory_initialise,
   };
@@ -68,6 +69,15 @@
       .then(onCreateDirSuccess, onCreateDirFailure);
   }
 
+  function directory_get(fsRoot, path, onDone) {
+    fsRoot.tryGetItemAsync(path.replace(/\//g, '\\'))
+      .then(function onGotDirectory(testDir) {
+        onDone(undefined, testDir);
+      }, function onGetDirectoryFailed(err) {
+        onDone(err);
+      });
+  }
+
   function directory_copyRecursive(fsRootSource, source, fsRootDest, dest, onDone) {
     // var numFods = 0;
     var numFiles = 0;
@@ -84,21 +94,21 @@
     fsRootSource
       .getFolderAsync(source)
       .then(function onGotSourceDir(srcDir) {
-        fsRootDest.tryGetItemAsync(dest)
-          .then(function onTestDestExists(testDestFolder) {
-            if (!!testDestFolder) {
-              // Remove it
-              testDestFolder.deleteAsync()
-                .then(function onDeleted() {
-                  mkdirDestAndCopyIntoIt();
-                }, function onDeleteFailed() {
-                  onDone('Destination directory already exists, and could not be deleted: '+testDestFolder.path);
-                });
-            }
-            else {
-              mkdirDestAndCopyIntoIt();
-            }
-          });
+        directory_get(fsRootDest, dest, function onTestDestExists(err, testDestFolder) {
+          // ignore any errors
+          if (!!testDestFolder) {
+            // Remove it
+            testDestFolder.deleteAsync()
+              .then(function onDeleted() {
+                mkdirDestAndCopyIntoIt();
+              }, function onDeleteFailed() {
+                onDone('Destination directory already exists, and could not be deleted: ' + testDestFolder.path);
+              });
+          }
+          else {
+            mkdirDestAndCopyIntoIt();
+          }
+        });
         function mkdirDestAndCopyIntoIt() {
           directory_makeRecursive(fsRootDest, dest, function onMkdirpDest(err, destFolder) {
             if (!!err) {
