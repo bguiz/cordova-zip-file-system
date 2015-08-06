@@ -31,7 +31,11 @@
 
       function mkdirSub(dirEntry) {
         if (dirs.length > 0) {
-          mkdir(fsRoot, dirs.pop(), onCreateDirSuccess, onCreateDirFailure);
+          var dir;
+           do {
+            dir = dirs.pop();
+           } while (!dir);
+          mkdir(fsRoot, dir, onCreateDirSuccess, onCreateDirFailure);
         }
         else {
           console.log('mkdir -p OK', path, dirEntry);
@@ -63,7 +67,10 @@
 
   function _windows_mkdir(fsRoot, dirPath, onCreateDirSuccess, onCreateDirFailure) {
     // console.log('mkdir-windows', dirPath);
-    dirPath = dirPath.replace( /\//g , '\\');
+    dirPath = dirPath.replace(/\//g, '\\');
+    if (dirPath.match(/\.js$/i)) {
+      throw 'Directory ending with .js';
+    }
     fsRoot
       .createFolderAsync(dirPath, global.Windows.Storage.CreationCollisionOption.openIfExists)
       .then(onCreateDirSuccess, onCreateDirFailure);
@@ -121,6 +128,7 @@
         }
       })
     .then(undefined, function onErr(err) {
+      console.log('Source:', source, 'Dest:', dest);
       console.error('Err:', err);
     });
 

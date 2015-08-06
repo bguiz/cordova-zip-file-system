@@ -12,9 +12,68 @@
     getEntry: file_getEntry,
     read: file_read,
     write: file_write,
+    downloadToBlob: file_downloadToBlob,
+    downloadToDisk: file_downloadToDisk,
     
     _initialise: file_initialise,
   };
+
+  function file_downloadToDisk(url, targetPath, onDone) {
+    console.log('file_downloadToDisk', url, targetPath);
+    if (!targetPath) {
+      onDone('Must specify a targetPath');
+    }
+    file_downloadToBlob(url, function onGotBlob(err, blob) {
+      if (!!err) {
+        onDone(err);
+        return;
+      }
+      file_write({
+        name: targetPath,
+        blob: blob,
+        flags: {
+          create: true,
+          exclusive: false,
+          mkdirp: true,
+        },
+      }, onDone);
+    });
+  }
+
+  /**
+   * Downloads a file at given URL and calls back with it as a Blob
+   *
+   * @param  {String} url    URL of the file to be downloaded
+   * @param  {Function} onDone Parameters: error, blob
+   */
+  function file_downloadToBlob(url, onDone) {
+    console.log('file_downloadToBlob', url);
+    var xhr = new global.XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'blob';
+    xhr.onreadystatechange = onXhrStateChange;
+    xhr.send(null);
+
+    function onXhrStateChange() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          // Success
+          console.log('success downloadUrlAsBlob', xhr.response);
+          var blob = new global.Blob([xhr.response], { type: zip.getMimeType(url) });
+          if (!blob || !blob.size) {
+            onDone('Downloaded blob is empty');
+            return;
+          }
+          onDone(undefined, blob);
+        }
+        else {
+          // Error
+          console.log('failure downloadUrlAsBlob', xhr);
+          onDone(xhr, xhr.status);
+        }
+      }
+    }
+  }
 
   function file_getEntry(path, options, onGotFileEntry) {
     options = options || {};

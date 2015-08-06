@@ -11,6 +11,8 @@
   global.CordovaZipFileSystem.platform = {
     initialise: platform_initialise,
     getCategory: platform_getCategory,
+    urlOfFileEntry: undefined,
+    getFileSystemRoot: undefined,
   };
 
   var category;

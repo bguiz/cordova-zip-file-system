@@ -87,7 +87,7 @@
 
   function downloadFileAsBlobAndPersist(options, onDone, onPersist) {
     // So we download the file
-    downloadUrlAsBlob(options.readerUrl, function onGotBlob(err, blob) {
+    global.CordovaZipFileSystem.file.downloadToBlob(options.readerUrl, function onGotBlob(err, blob) {
       if (!!err) {
         onDone(err);
         return
@@ -215,40 +215,7 @@
     });
   }
 
-  /**
-   * Downloads a file at given URL and calls back with it as a Blob
-   *
-   * @param  {String} url    URL of the file to be downloaded
-   * @param  {Function} onDone Parameters: error, blob
-   */
-  function downloadUrlAsBlob(url, onDone) {
-    console.log('downloadUrlAsBlob', url);
-    var xhr = new global.XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'blob';
-    xhr.onreadystatechange = onXhrStateChange;
-    xhr.send(null);
-
-    function onXhrStateChange() {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          // Success
-          console.log('success downloadUrlAsBlob', xhr.response);
-          var blob = new global.Blob([xhr.response], { type: zip.getMimeType(url) });
-          if (!blob || !blob.size) {
-            onDone('Downloaded blob is empty');
-            return;
-          }
-          onDone(undefined, blob);
-        }
-        else {
-          // Error
-          console.log('failure downloadUrlAsBlob', xhr);
-          onDone(xhr, xhr.status);
-        }
-      }
-    }
-  }
+  
 
   var MAX_CONCURRENT_INFLATE = 512;
   var MAX_CONCURRENT_SIZE_COST = 2 * 1024 * 1024;
@@ -403,15 +370,20 @@
 
     zip.createReader(reader, function onZipReaderCreated(zipReader) {
       zipReader.getEntries(function onZipEntriesListed(entries) {
+        console.log('entries', entries);
         entries = entries.filter(function(entry) {
           return !entry.directory;
         });
         if (!!options.preemptiveTreeMkdir) {
-          // Preemptively construct all of the required directories
+          // Pre-emptively construct all of the required directories
           // to avoid having to do this repetitively as each file is written
-          var dirs = entries.map(function dirOfFile(entry) {
-            return options.extractFolder+'/'+entry.filename.replace( /\/[^\/]+$/ , '');
-          });
+          var dirs = entries
+            .filter(function (entry) {
+              return entry.filename.match(/\//);
+            })
+            .map(function dirOfFile(entry) {
+              return options.extractFolder+'/'+entry.filename.replace( /\/[^\/]+$/ , '');
+            });
           global.CordovaZipFileSystem.directory.makeTree(dirs, function onCompleteRootTree(errors) {
             // console.log('mkdir tree completed', 'completed', completedSubTrees, '/', totalSubTrees, 'errors:', errors);
             console.log('mkdir tree completed', 'errors:', errors);
