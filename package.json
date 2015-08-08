@@ -1,6 +1,6 @@
 {
   "name": "cordova-zip-file-system",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Manipulate zip files and the file system in Cordova apps",
   "main": "platform.js",
   "scripts": {
