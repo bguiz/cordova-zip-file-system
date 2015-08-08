@@ -14,7 +14,7 @@
     write: file_write,
     downloadToBlob: file_downloadToBlob,
     downloadToDisk: file_downloadToDisk,
-    
+
     _initialise: file_initialise,
   };
 
@@ -133,7 +133,7 @@
        //     fsRoot.
        // getFileAsync(path)
        // .then(onGotFileEntry, onFailToGetFileEntry);
-      
+
     }
   }
 
@@ -246,7 +246,7 @@
         method = 'readTextAsync';
         break;
       case 'readAsDataURL':
-        throw 'DataURL unsupported on Windows'; 
+        throw 'DataURL unsupported on Windows';
       case 'readAsBinaryString':
         throw 'BinaryString unsupported on Windows';
       case 'readAsArrayBuffer':
